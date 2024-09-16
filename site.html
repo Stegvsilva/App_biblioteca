@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cadastro e Listagem de Livros</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+        .tab-container {
+            margin: 20px;
+        }
+        .tabs {
+            overflow: hidden;
+            background-color: #f1f1f1;
+            border-bottom: 1px solid #ccc;
+        }
+        .tab-button {
+            background-color: #ddd;
+            border: none;
+            outline: none;
+            padding: 14px 16px;
+            cursor: pointer;
+            display: inline-block;
+        }
+        .tab-button.active {
+            background-color: #ccc;
+        }
+        .tab-content {
+            display: none;
+            padding: 20px;
+            border: 1px solid #ccc;
+            border-top: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .form-group {
+            margin-bottom: 10px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        .form-group input {
+            width: 100%;
+            padding: 8px;
+            box-sizing: border-box;
+        }
+        .book-item {
+            margin-bottom: 10px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="tab-container">
+        <div class="tabs">
+            <button class="tab-button active" onclick="openTab('cadastro')">Cadastro de Livros</button>
+            <button class="tab-button" onclick="openTab('listagem')">Listagem de Livros</button>
+        </div>
+
+        <div id="cadastro" class="tab-content active">
+            <h1>Cadastro de Livro</h1>
+            <form id="livro-form">
+                <div class="form-group">
+                    <label for="titulo">Título</label>
+                    <input type="text" id="titulo" name="titulo" required>
+                </div>
+                <div class="form-group">
+                    <label for="autor">Autor</label>
+                    <input type="text" id="autor" name="autor" required>
+                </div>
+                <div class="form-group">
+                    <label for="gereno">Gênero</label>
+                    <input type="text" id="gereno" name="gereno" required>
+                </div>
+                <button type="submit">Cadastrar Livro</button>
+            </form>
+        </div>
+
+        <div id="listagem" class="tab-content">
+            <h1>Listagem de Livros</h1>
+            <div id="livros-lista"></div>
+        </div>
+    </div>
+
+    <script>
+        // Função para alternar entre abas
+        function openTab(tabId) {
+            const tabs = document.querySelectorAll('.tab-content');
+            const buttons = document.querySelectorAll('.tab-button');
+
+            tabs.forEach(tab => {
+                tab.classList.remove('active');
+            });
+
+            buttons.forEach(button => {
+                button.classList.remove('active');
+            });
+
+            document.getElementById(tabId).classList.add('active');
+            document.querySelector(`.tab-button[onclick="openTab('${tabId}')"]`).classList.add('active');
+        }
+
+        // Função para buscar e listar livros
+        // Função para buscar e listar livros
+            async function listarLivros() {
+            const livrosLista = document.getElementById('livros-lista');
+            livrosLista.innerHTML = ''; // Limpa a lista existente
+
+            let id = 1; // Começa com o ID 1 e incrementa
+            let continuar = true; // Controla a iteração para parar quando não houver mais livros
+
+            while (continuar) {
+                try {
+                    const response = await fetch(`http://localhost:8000/livros/${id}`);
+                    if (response.ok) {
+                        const livro = await response.json();
+
+                        // Cria e exibe cada livro na lista
+                        const livroDiv = document.createElement('div');
+                        livroDiv.classList.add('book-item');
+                        livroDiv.innerHTML = `
+                            <p><strong>ID:</strong> ${livro.id}</p>
+                            <p><strong>Título:</strong> ${livro.titulo}</p>
+                            <p><strong>Autor:</strong> ${livro.autor}</p>
+                            <p><strong>Gênero:</strong> ${livro.genero}</p>
+                            <p><strong>Disponível:</strong> ${livro.disponivel ? 'Sim' : 'Não'}</p>
+                        `;
+                        livrosLista.appendChild(livroDiv);
+
+                        id++; // Incrementa o ID para buscar o próximo livro
+                    } else {
+                        // Se a resposta não for OK (por exemplo, 404), paramos a busca
+                        continuar = false;
+                    }
+                } catch (error) {
+                    console.error('Erro ao listar livros:', error);
+                    livrosLista.innerHTML = 'Erro ao carregar livros.';
+                    continuar = false;
+                }
+            }
+
+            if (id === 1) {
+                livrosLista.innerHTML = 'Nenhum livro encontrado.';
+            }
+        }
+
+
+        // Função para cadastrar um livro
+        document.getElementById('livro-form').addEventListener('submit', async function (event) {
+            event.preventDefault();
+
+            const titulo = document.getElementById('titulo').value;
+            const autor = document.getElementById('autor').value;
+            const gereno = document.getElementById('gereno').value;
+
+            const data = { titulo, autor, gereno };
+
+            try {
+                const response = await fetch('http://localhost:8000/livros/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(data),
+                });
+
+                if (response.ok) {
+                    alert('Livro cadastrado com sucesso!');
+                    document.getElementById('livro-form').reset();
+                    listarLivros(); // Atualiza a lista de livros após o cadastro
+                } else {
+                    const errorData = await response.json();
+                    alert(`Erro: ${errorData.detail}`);
+                }
+            } catch (error) {
+                console.error('Erro ao cadastrar livro:', error);
+                alert('Erro ao cadastrar livro.');
+            }
+        });
+
+        // Atualiza a lista de livros ao carregar a aba de listagem
+        document.querySelector('.tab-button[onclick="openTab(\'listagem\')"]').addEventListener('click', listarLivros);
+
+    </script>
+</body>
+</html>
